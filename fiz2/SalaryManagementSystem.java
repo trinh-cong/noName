@@ -6,6 +6,7 @@ import java.util.*;
 
 
     public class SalaryManagementSystem {
+
         public void displayEmployeeInformation() {
             System.out.printf("%-15s%-15s%-20s%-20s%-15s\n", "Tên", "Chức vụ", "Số ngày làm thêm", "Số giờ làm thêm", "Tiền công");
             for (Map.Entry<String, Employee> entry : employees.entrySet()) {
@@ -15,6 +16,7 @@ import java.util.*;
                         employee.calculateSalary());
             }
         }
+
         private String getUserInput(String errorMessage, List<String> validPositions) {
             String userInput;
 
@@ -31,12 +33,12 @@ import java.util.*;
         }
 
         private int getIntInput(String prompt, String errorMessage) {
+
             int userInput;
 
             do {
                 System.out.print(prompt);
                 String input = scanner.nextLine().trim();
-
                 if (isInteger(input)) {
                     userInput = Integer.parseInt(input);
                     return userInput;
@@ -71,10 +73,65 @@ import java.util.*;
         private String currentMonth;
         private Scanner scanner = new Scanner(System.in);
 
+
         public SalaryManagementSystem() {
             this.currentMonth = getCurrentMonth();
+            this.employees = new LinkedHashMap<>();
+            this.employees = loadData();
+            this.scanner = new Scanner(System.in);
+        }
+        private LinkedHashMap<String, Employee> loadData() {
+            LinkedHashMap<String, Employee> loadedData = new LinkedHashMap<>();
+            String fileName = "salary_" + currentMonth + ".txt";
+
+            try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String[] tokens = line.split(",");
+                    String name = tokens[0];
+                    String position = tokens[1];
+                    int extraDays = Integer.parseInt(tokens[2]);
+                    int extraHours = Integer.parseInt(tokens[3]);
+                    String salary = tokens[4];
+
+                    Employee employee = (position.equals("Quản lý") || position.equals("Công nhân")) ?
+                            new FullTimeEmployee(name, position, extraDays) :
+                            new PartTimeEmployee(name, position, extraDays, extraHours);
+
+                    loadedData.put(name, employee);
+                }
+            } catch (IOException | NumberFormatException e) {
+                System.out.println("Lỗi tải dữ liệu từ tệp: " + e.getMessage());
+            }
+
+            return loadedData;
         }
 
+        private void saveData() {
+            String fileName = "salary_" + currentMonth + ".txt";
+
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName, false))) {
+                for (Map.Entry<String, Employee> entry : employees.entrySet()) {
+                    Employee employee = entry.getValue();
+                    bw.write(entry.getKey() + "," + employee.getPosition() + ","
+                            + employee.getExtraDays() + "," + (employee instanceof PartTimeEmployee ? ((PartTimeEmployee) employee).getExtraHours() : "0") + ","
+                            + employee.calculateSalary() + "\n");
+                }
+            } catch (IOException e) {
+                System.out.println("Lỗi ghi vào tệp: " + e.getMessage());
+            }
+        }
+
+        private void saveToFile(String name, String position, int extraDays, int extraHours) {
+            String fileName = "salary_" + currentMonth + ".txt";
+
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName, true))) {
+                bw.write(name + "," + position + "," + extraDays + "," + extraHours + "," +
+                        employees.get(name).calculateSalary() + "\n");
+            } catch (IOException e) {
+                System.out.println("Error writing to file: " + e.getMessage());
+            }
+        }
         public void addEmployeeInformation() {
             int numberOfEmployees = getIntInput("Enter the number of employees to add: ", "Invalid input. Please enter a non-negative integer.");
 
@@ -113,16 +170,7 @@ import java.util.*;
         }
 
 
-        private void saveToFile(String name, String position, int extraDays, int extraHours) {
-            String fileName = "salary_" + currentMonth + ".txt";
 
-            try (BufferedWriter bw = new BufferedWriter(new FileWriter(fileName, true))) {
-                bw.write(name + "," + position + "," + extraDays + "," + extraHours + "," +
-                        employees.get(name).calculateSalary() + "\n");
-            } catch (IOException e) {
-                System.out.println("Error writing to file: " + e.getMessage());
-            }
-        }
 
         public void displaySalaryInformation() {
             System.out.printf("%-15s%-15s%-20s%-20s%-15s\n", "Tên", "Chức vụ", "Số ngày làm thêm", "Số giờ làm thêm", "Tiền công");
@@ -228,6 +276,7 @@ import java.util.*;
             } catch (IOException e) {
                 System.out.println("Error writing to file: " + e.getMessage());
             }
+            saveData();
         }
 
         private String getCurrentMonth() {
